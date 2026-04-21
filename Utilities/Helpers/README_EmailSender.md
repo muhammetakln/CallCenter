@@ -1,13 +1,221 @@
-# EmailSender Helper
+# Utilities.Helpers - Veri İthalatı ve Email Gönderimi
 
-SMTP kullanarak email göndermek için yapılandırılmış yardımcı sınıf.
-
-## 📋 İçerik
-
-### EmailSender.cs
-`IEmailSender` arayüzünü implement eden email gönderme sınıfı.
+Kapsamlı bir yardımcı kütüphane paketi. CSV dosyalarını okumak ve email gönderimi için açık kaynaklı çözümleri içerir.
 
 ---
+
+## 📚 İçindekiler
+
+1. [DataImporters - CSV İthalatı](#dataimporters---csv-ithalatı)
+2. [EmailSender - Email Gönderimi](#emailsender---email-gönderimi)
+3. [Kurulum ve Yapılandırma](#kurulum-ve-yapılandırma)
+4. [Kullanım Örnekleri](#kullanım-örnekleri)
+5. [Hata Çözümleri](#hata-çözümleri)
+6. [En İyi Uygulamalar](#en-iyi-uygulamalar)
+
+---
+
+## 🎯 Genel Özellikler
+
+- ✅ **.NET 8.0** tam uyumlu
+- ✅ **Async/Await** desteği
+- ✅ **Exception Handling** ve hata yönetimi
+- ✅ **Logging** mekanizması
+- ✅ **Dependency Injection** desteği
+- ✅ **XML Documentation** comments
+- ✅ **Validation** kontrolleri
+
+---
+
+# DataImporters - CSV İthalatı
+
+## 📋 Açıklama
+
+`DataImporters` sınıfı, CSV dosyalarını asynchronously okuyup .NET nesnelerine dönüştüren statik yardımcı sınıftır. **CsvHelper** kütüphanesini kullanarak, CSV verilerini türü belirtilmiş (strongly-typed) C# nesnelerine kolayca eşleştirmenizi sağlar.
+
+## 🎯 Özellikler
+
+- ✅ **Asynchronous İşlem**: Non-blocking CSV okuma
+- ✅ **Generic Tip Desteği**: Herhangi bir veri sınıfını kullanabilirsiniz
+- ✅ **Otomatik Mapping**: CSV sütunları otomatik olarak property'lere eşlenir
+- ✅ **Hafif ve Verimli**: Stream tabanlı işleme
+- ✅ **Culture Invariant**: Uluslararası formatları destekler
+
+## 📦 Bağımlılıklar
+
+```bash
+dotnet add package CsvHelper
+```
+
+**Desteklenen Sürümler:**
+- CsvHelper: 30.0.0 veya sonrası
+- Framework: .NET 8.0+
+
+## 🚀 Kullanım - DataImporters
+
+### Adım 1: Veri Modeli Oluşturun
+
+```csharp
+namespace YourApp.Models
+{
+    public class Person
+    {
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+        public int Age { get; set; }
+        public string Email { get; set; }
+        public DateTime BirthDate { get; set; }
+    }
+}
+```
+
+### Adım 2: CSV Dosyasını İçe Aktarın
+
+```csharp
+using Utilities.Helpers;
+using System.IO;
+
+// Dosya yolu ile kullanım
+using var stream = new FileStream("people.csv", FileMode.Open, FileAccess.Read);
+var people = await DataImporters.ImportCsvAsync<Person>(stream);
+
+// Sonuçları işleyin
+foreach (var person in people)
+{
+    Console.WriteLine($"{person.FirstName} {person.LastName} - {person.Age}");
+}
+```
+
+### Adım 3: CSV Dosya Formatı
+
+Örnek CSV dosyası (`people.csv`):
+
+```csv
+FirstName,LastName,Age,Email,BirthDate
+John,Doe,30,john.doe@example.com,1994-05-15
+Jane,Smith,28,jane.smith@example.com,1996-08-22
+Bob,Johnson,35,bob.johnson@example.com,1989-12-03
+```
+
+## 📊 CSV Okuma Senaryoları
+
+### Senaryo 1: Web Upload ile CSV İçe Aktarma
+
+```csharp
+[HttpPost("upload-csv")]
+public async Task<IActionResult> UploadCsv(IFormFile file)
+{
+    try
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest("Dosya yüklenmedi.");
+
+        using var stream = file.OpenReadStream();
+        var employees = await DataImporters.ImportCsvAsync<Employee>(stream);
+        
+        // Veritabanına kaydedin
+        await _context.Employees.AddRangeAsync(employees);
+        await _context.SaveChangesAsync();
+        
+        return Ok(new 
+        { 
+            message = "Başarıyla içe aktarıldı",
+            count = employees.Count()
+        });
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError($"CSV Upload hatası: {ex.Message}");
+        return BadRequest(new { error = ex.Message });
+    }
+}
+```
+
+### Senaryo 2: Toplu Dosya İçe Aktarma
+
+```csharp
+public async Task ImportMultipleCsvFilesAsync(string directoryPath)
+{
+    var csvFiles = Directory.GetFiles(directoryPath, "*.csv");
+    var results = new List<(string file, int count, bool success)>();
+
+    foreach (var filePath in csvFiles)
+    {
+        try
+        {
+            using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+            var records = await DataImporters.ImportCsvAsync<SalesRecord>(stream);
+            
+            await ProcessRecords(records);
+            
+            results.Add((Path.GetFileName(filePath), records.Count(), true));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Dosya işlenemedi: {filePath}. Hata: {ex.Message}");
+            results.Add((Path.GetFileName(filePath), 0, false));
+        }
+    }
+
+    LogImportSummary(results);
+}
+```
+
+### Senaryo 3: Veri Doğrulama ve Filtreleme
+
+```csharp
+public async Task<List<Person>> ImportAndValidateAsync(Stream stream)
+{
+    var people = await DataImporters.ImportCsvAsync<Person>(stream);
+
+    var validPeople = people
+        .Where(p => !string.IsNullOrWhiteSpace(p.Email))
+        .Where(p => p.Age >= 18 && p.Age <= 120)
+        .Where(p => Regex.IsMatch(p.Email, @"^[^\s@]+@[^\s@]+\.[^\s@]+$"))
+        .ToList();
+
+    _logger.LogInformation($"Toplam: {people.Count()}, Geçerli: {validPeople.Count()}");
+
+    return validPeople;
+}
+```
+
+### Senaryo 4: Toplu İşleme (Batch Processing)
+
+```csharp
+public async Task ImportWithBatchProcessingAsync(Stream stream, int batchSize = 1000)
+{
+    var people = await DataImporters.ImportCsvAsync<Person>(stream);
+
+    var batches = people
+        .Select((item, index) => new { item, index })
+        .GroupBy(x => x.index / batchSize)
+        .Select(g => g.Select(x => x.item).ToList());
+
+    foreach (var batch in batches)
+    {
+        try
+        {
+            await _context.People.AddRangeAsync(batch);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation($"Batch işlendi: {batch.Count} kayıt");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Batch işleme hatası: {ex.Message}");
+            throw;
+        }
+    }
+}
+```
+
+---
+
+# EmailSender - Email Gönderimi
+
+## 📋 Açıklama
+
+`EmailSender` sınıfı, SMTP protokolü kullanarak email gönderimi sağlayan yardımcı sınıftır. **Microsoft.AspNetCore.Identity.UI** arayüzünü implement eder ve dependency injection ile entegre çalışır.
 
 ## 🎯 Özellikler
 
@@ -17,29 +225,56 @@ SMTP kullanarak email göndermek için yapılandırılmış yardımcı sınıf.
 - ✅ Options Pattern kullanımı
 - ✅ SSL/TLS şifreleme
 - ✅ Microsoft Identity entegrasyonu
+- ✅ Exception handling ve logging
+- ✅ Email validasyonu
+- ✅ Timeout ayarı
+- ✅ Configuration validation
 
----
+## 📦 Bağımlılıklar
 
-## 🔧 Kurulum
+```bash
+dotnet add package Microsoft.AspNetCore.Identity.UI
+```
 
-### 1. EmailSettings Modeli Oluştur
+## 🔧 Kurulum - EmailSender
+
+### Adım 1: EmailSettings Modelini Oluşturun
 
 ```csharp
-// Utilities.Models/EmailSettings.cs
+// Utilities/Models/EmailSettings.cs
 namespace Utilities.Models
 {
     public class EmailSettings
     {
+        /// <summary>
+        /// SMTP sunucusu adresi (örn: smtp.gmail.com)
+        /// </summary>
         public string Host { get; set; }
+
+        /// <summary>
+        /// SMTP port numarası (genellikle 587 veya 465)
+        /// </summary>
         public int Port { get; set; }
+
+        /// <summary>
+        /// SMTP kullanıcı adı (genellikle email adresi)
+        /// </summary>
         public string UserName { get; set; }
+
+        /// <summary>
+        /// SMTP şifresi veya uygulama parolası
+        /// </summary>
         public string Password { get; set; }
+
+        /// <summary>
+        /// Email gönderenin adı (alıcıda gösterilecek isim)
+        /// </summary>
         public string DisplayName { get; set; }
     }
 }
 ```
 
-### 2. appsettings.json Yapılandır
+### Adım 2: appsettings.json Yapılandırması
 
 ```json
 {
@@ -49,24 +284,40 @@ namespace Utilities.Models
     "UserName": "your-email@gmail.com",
     "Password": "your-app-password",
     "DisplayName": "Uygulamanız Adı"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information"
+    }
   }
 }
 ```
 
-### 3. Dependency Injection Kaydet
+### Adım 3: Dependency Injection Yapılandırması
 
 ```csharp
 // Program.cs
+var builder = WebApplicationBuilder.CreateBuilder(args);
+
+// EmailSettings yapılandırmasını kaydet
 builder.Services.Configure<EmailSettings>(
     builder.Configuration.GetSection("EmailSettings")
 );
 
+// IEmailSender arayüzünü EmailSender ile kaydet
 builder.Services.AddScoped<IEmailSender, EmailSender>();
+
+// Logging yapılandırması
+builder.Services.AddLogging(config =>
+{
+    config.AddConsole();
+    config.AddDebug();
+});
+
+var app = builder.Build();
 ```
 
----
-
-## 📚 Metodlar
+## 📚 Metodlar - EmailSender
 
 ### SendEmailAsync
 
@@ -75,24 +326,27 @@ public async Task SendEmailAsync(string email, string subject, string htmlMessag
 ```
 
 **Parametreler:**
-- `email` (string) - Alıcı email adresi
-- `subject` (string) - Email konusu
-- `htmlMessage` (string) - Email içeriği (HTML destekli)
+| Parametre | Tip | Açıklama |
+|-----------|-----|----------|
+| `email` | string | Alıcı email adresi |
+| `subject` | string | Email başlığı |
+| `htmlMessage` | string | Email içeriği (HTML formatında) |
 
-**Dönüş:** Task (async işlem)
+**İstisnalar:**
+- `ArgumentException`: Email adresi geçersiz ise
+- `InvalidOperationException`: Email gönderme başarısız oldu ise
+- `ArgumentNullException`: Settings null ise
 
----
+## 💻 Kullanım Örnekleri - EmailSender
 
-## 💻 Kullanım Örnekleri
-
-### Örnek 1: Basit Email Gönderme
+### Örnek 1: Hoş Geldiniz Emaili
 
 ```csharp
-public class UserService
+public class AccountService
 {
     private readonly IEmailSender _emailSender;
 
-    public UserService(IEmailSender emailSender)
+    public AccountService(IEmailSender emailSender)
     {
         _emailSender = emailSender;
     }
@@ -101,9 +355,16 @@ public class UserService
     {
         string subject = "Hoş Geldiniz!";
         string htmlMessage = $@"
-            <h1>Hoş Geldiniz {userName}!</h1>
-            <p>Sitemize kaydınız başarıyla tamamlandı.</p>
-            <a href='https://example.com/verify'>E-mailini Doğrula</a>
+            <html>
+                <body style='font-family: Arial, sans-serif;'>
+                    <h1>Hoş Geldiniz, {userName}!</h1>
+                    <p>Sitemize kaydınız başarıyla tamamlandı.</p>
+                    <p>Hesabınızı tam kullanabilmek için email adresinizi doğrulamanız gerekiyor.</p>
+                    <a href='https://example.com/verify' style='background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;'>
+                        Email Adresini Doğrula
+                    </a>
+                </body>
+            </html>
         ";
         
         await _emailSender.SendEmailAsync(email, subject, htmlMessage);
@@ -116,10 +377,18 @@ public class UserService
 ```csharp
 public async Task SendConfirmationEmailAsync(string email, string callbackUrl)
 {
-    string subject = "Email Doğrulama";
+    string subject = "Email Adresinizi Doğrulayın";
     string htmlMessage = $@"
-        <p>Lütfen hesabınızı doğrulamak için aşağıdaki linke tıklayın:</p>
-        <a href='{callbackUrl}'>Hesabı Doğrula</a>
+        <html>
+            <body>
+                <h2>Email Doğrulaması Gerekli</h2>
+                <p>Lütfen hesabınızı doğrulamak için aşağıdaki linke tıklayın:</p>
+                <a href='{callbackUrl}'>Hesabı Doğrula</a>
+                <p style='color: gray; font-size: 12px;'>
+                    Bu link 24 saat geçerlidir.
+                </p>
+            </body>
+        </html>
     ";
     
     await _emailSender.SendEmailAsync(email, subject, htmlMessage);
@@ -131,15 +400,21 @@ public async Task SendConfirmationEmailAsync(string email, string callbackUrl)
 ```csharp
 public async Task SendPasswordResetEmailAsync(string email, string resetToken)
 {
-    string subject = "Şifre Sıfırlama";
-    string resetUrl = $"https://example.com/reset-password?token={resetToken}";
+    string subject = "Şifre Sıfırlama Talebi";
+    string resetUrl = $"https://example.com/reset-password?token={Uri.EscapeDataString(resetToken)}";
+    
     string htmlMessage = $@"
-        <h2>Şifrenizi Sıfırlayın</h2>
-        <p>Şifrenizi sıfırlamak için aşağıdaki linke tıklayın:</p>
-        <a href='{resetUrl}' style='background-color: blue; color: white; padding: 10px; text-decoration: none;'>
-            Şifresini Sıfırla
-        </a>
-        <p>Bu link 24 saat geçerlidir.</p>
+        <html>
+            <body>
+                <h2>Şifre Sıfırlama Talebi</h2>
+                <p>Şifrenizi sıfırlamak için aşağıdaki butona tıklayın:</p>
+                <a href='{resetUrl}' style='background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;'>
+                    Şifresini Sıfırla
+                </a>
+                <p><strong>Uyarı:</strong> Bu link 2 saat geçerlidir.</p>
+                <p>Bu talebi siz yapmadıysanız bu emaili görmezden gelebilirsiniz.</p>
+            </body>
+        </html>
     ";
     
     await _emailSender.SendEmailAsync(email, subject, htmlMessage);
@@ -149,141 +424,110 @@ public async Task SendPasswordResetEmailAsync(string email, string resetToken)
 ### Örnek 4: Bildirim Emaili
 
 ```csharp
-public async Task SendNotificationAsync(string email, string message, string actionUrl)
+public async Task SendNotificationAsync(
+    string email, 
+    string title, 
+    string message, 
+    string actionUrl, 
+    string actionText = "Detayları Görüntüle")
 {
-    string subject = "Yeni Bildirim";
+    string subject = title;
     string htmlMessage = $@"
-        <h3>Sizin için yeni bir güncelleme var!</h3>
-        <p>{message}</p>
-        <a href='{actionUrl}'>Detayları Görüntüle</a>
+        <html>
+            <body>
+                <h3>{title}</h3>
+                <p>{message}</p>
+                <a href='{actionUrl}' style='background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;'>
+                    {actionText}
+                </a>
+            </body>
+        </html>
     ";
     
     await _emailSender.SendEmailAsync(email, subject, htmlMessage);
 }
 ```
 
----
+### Örnek 5: Sipariş Onay Emaili
 
-## ⚠️ Bilinen Sorunlar
-
-### Problem 1: Null Reference Exception
 ```csharp
-// ❌ Settings null olabilir
-private readonly EmailSettings settings;
-```
-
-**Çözüm:**
-```csharp
-// ✅ Null check ekle
-private readonly EmailSettings settings;
-
-public EmailSender(IOptions<EmailSettings> options)
+public async Task SendOrderConfirmationAsync(string email, Order order)
 {
-    settings = options?.Value ?? throw new ArgumentNullException(nameof(options));
-}
-```
-
----
-
-### Problem 2: Exception Handling Yok
-Email gönderme başarısız olduğunda hata yakalanmıyor.
-
-**Çözüm:**
-```csharp
-public async Task SendEmailAsync(string email, string subject, string htmlMessage)
-{
-    try
-    {
-        using var client = new SmtpClient(settings.Host, settings.Port)
-        {
-            Credentials = new NetworkCredential(settings.UserName, settings.Password),
-            EnableSsl = true
-        };
-        
-        using var mailMessage = new MailMessage
-        {
-            From = new MailAddress(settings.UserName, settings.DisplayName),
-            Subject = subject,
-            Body = htmlMessage,
-            IsBodyHtml = true
-        };
-        
-        mailMessage.To.Add(email);
-        await client.SendMailAsync(mailMessage);
-    }
-    catch (SmtpException ex)
-    {
-        throw new InvalidOperationException("Email gönderme başarısız oldu.", ex);
-    }
-    catch (Exception ex)
-    {
-        throw new InvalidOperationException("Beklenmeyen bir hata oluştu.", ex);
-    }
-}
-```
-
----
-
-### Problem 3: Timeout Ayarı Yok
-
-**Çözüm:**
-```csharp
-using var client = new SmtpClient(settings.Host, settings.Port)
-{
-    Credentials = new NetworkCredential(settings.UserName, settings.Password),
-    EnableSsl = true,
-    Timeout = 10000  // 10 saniye
-};
-```
-
----
-
-### Problem 4: Email Validasyon Yok
-
-**Çözüm:**
-```csharp
-public async Task SendEmailAsync(string email, string subject, string htmlMessage)
-{
-    // ✅ Email validasyonu
-    if (string.IsNullOrWhiteSpace(email))
-        throw new ArgumentException("Email boş olamaz.", nameof(email));
+    string subject = $"Siparişiniz Onaylandı - #{order.OrderId}";
     
-    if (!email.Contains("@"))
-        throw new ArgumentException("Geçersiz email formatı.", nameof(email));
+    string htmlMessage = $@"
+        <html>
+            <body>
+                <h2>Siparişiniz Onaylandı!</h2>
+                <p>Siparişiniz başarıyla oluşturulmuştur.</p>
+                
+                <h3>Sipariş Detayları</h3>
+                <table style='border-collapse: collapse; width: 100%;'>
+                    <tr style='border-bottom: 1px solid #ddd;'>
+                        <th style='text-align: left; padding: 8px;'>Ürün</th>
+                        <th style='text-align: left; padding: 8px;'>Miktar</th>
+                        <th style='text-align: right; padding: 8px;'>Fiyat</th>
+                    </tr>
+                    {string.Join("", order.Items.Select(item => $@"
+                        <tr style='border-bottom: 1px solid #eee;'>
+                            <td style='padding: 8px;'>{item.ProductName}</td>
+                            <td style='padding: 8px;'>{item.Quantity}</td>
+                            <td style='text-align: right; padding: 8px;'>{item.Price:C}</td>
+                        </tr>
+                    "))}
+                </table>
+                
+                <h3 style='text-align: right;'>Toplam: {order.TotalPrice:C}</h3>
+                <p>Takip Numarası: {order.TrackingNumber}</p>
+            </body>
+        </html>
+    ";
     
-    // ... kalan kod ...
+    await _emailSender.SendEmailAsync(email, subject, htmlMessage);
 }
 ```
 
----
+### Örnek 6: Service'te Hata Yönetimi ile Kullanım
 
-### Problem 5: Logging Yok
-
-**Çözüm:**
 ```csharp
-public class EmailSender : IEmailSender
+public class UserService
 {
-    private readonly EmailSettings settings;
-    private readonly ILogger<EmailSender> logger;
+    private readonly IEmailSender _emailSender;
+    private readonly ILogger<UserService> _logger;
 
-    public EmailSender(IOptions<EmailSettings> options, ILogger<EmailSender> logger)
+    public UserService(IEmailSender emailSender, ILogger<UserService> logger)
     {
-        settings = options.Value;
-        this.logger = logger;
+        _emailSender = emailSender;
+        _logger = logger;
     }
 
-    public async Task SendEmailAsync(string email, string subject, string htmlMessage)
+    public async Task RegisterUserAsync(User user)
     {
-        logger.LogInformation($"Email gönderiliyor: {email}");
-        
         try
         {
-            // ... email gönderme kodu ...
-            logger.LogInformation($"Email başarıyla gönderildi: {email}");
+            // Kullanıcıyı kaydet
+            await SaveUserAsync(user);
+
+            // Onay emaili gönder
+            string subject = "Hesap Oluşturma Onayı";
+            string confirmationUrl = GenerateConfirmationUrl(user.Id);
+            
+            await _emailSender.SendEmailAsync(
+                user.Email,
+                subject,
+                $"<a href='{confirmationUrl}'>Hesabınızı Doğrulayın</a>"
+            );
+
+            _logger.LogInformation($"Kullanıcı kaydı başarılı: {user.Email}");
         }
-        catch (Exception ex)
+        catch (ArgumentException ex)
         {
-            logger.LogError($"Email gönderilemedi: {email}. Hata: {ex.Message}");
+            _logger.LogWarning($"Geçersiz email: {ex.Message}");
+            throw;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError($"Email gönderme başarısız: {ex.Message}");
             throw;
         }
     }
@@ -292,83 +536,75 @@ public class EmailSender : IEmailSender
 
 ---
 
-## 🚀 İyileştirmeler
+# Kurulum ve Yapılandırma
 
-### Şablon Desteği Ekle
+## 📥 NuGet Paketleri
 
-```csharp
-public class EmailTemplate
-{
-    public string Subject { get; set; }
-    public string Body { get; set; }
-}
-
-public class EmailSender : IEmailSender
-{
-    private readonly Dictionary<string, EmailTemplate> templates;
-    
-    public async Task SendEmailFromTemplateAsync(
-        string email, 
-        string templateName, 
-        Dictionary<string, string> variables)
-    {
-        var template = templates[templateName];
-        
-        string body = template.Body;
-        foreach (var variable in variables)
-        {
-            body = body.Replace($"{{{variable.Key}}}", variable.Value);
-        }
-        
-        await SendEmailAsync(email, template.Subject, body);
-    }
-}
+```bash
+dotnet add package CsvHelper
+dotnet add package Microsoft.AspNetCore.Identity.UI
 ```
 
-### Batch Email Gönderme
+## 🔐 Güvenlik - Credentials Yönetimi
 
-```csharp
-public async Task SendBatchEmailAsync(
-    IEnumerable<string> emails, 
-    string subject, 
-    string htmlMessage)
-{
-    var tasks = emails.Select(email => 
-        SendEmailAsync(email, subject, htmlMessage)
-    );
-    
-    await Task.WhenAll(tasks);
-}
+### Seçenek 1: User Secrets (Development)
+
+```bash
+dotnet user-secrets init
+dotnet user-secrets set "EmailSettings:Password" "your-secure-password"
+dotnet user-secrets set "EmailSettings:UserName" "your-email@example.com"
 ```
 
-### Background Job ile Gönderme
+### Seçenek 2: Environment Variables (Production)
+
+```bash
+export EMAIL_SETTINGS__PASSWORD="your-secure-password"
+export EMAIL_SETTINGS__USERNAME="your-email@example.com"
+```
+
+### Seçenek 3: Azure Key Vault
 
 ```csharp
-// Hangfire ile entegrasyon
-public async Task SendEmailAsyncBackground(string email, string subject, string htmlMessage)
-{
-    BackgroundJob.Enqueue(() => SendEmailAsync(email, subject, htmlMessage));
-}
+var keyVaultUrl = new Uri($"https://{Environment.GetEnvironmentVariable("KEY_VAULT_NAME")}.vault.azure.net/");
+var credential = new DefaultAzureCredential();
+builder.Configuration.AddAzureKeyVault(keyVaultUrl, credential);
 ```
 
 ---
 
-## 📧 SMTP Sağlayıcıları Yapılandırması
+# Hata Çözümleri
 
-### Gmail
-```json
-{
-  "EmailSettings": {
-    "Host": "smtp.gmail.com",
-    "Port": 587,
-    "UserName": "your-email@gmail.com",
-    "Password": "your-app-password",
-    "DisplayName": "Your App Name"
-  }
-}
-```
+## DataImporters Hataları
 
-### Outlook
+| Hata | Sebep | Çözüm |
+|------|-------|-------|
+| `CsvHelper not found` | NuGet paketi yüklü değil | `dotnet add package CsvHelper` |
+| `Column not found` | CSV sütun adı property adı ile uymuyor | Sütun adlarını kontrol edin |
+| `Invalid cast` | Veri tipi uyumsuz | Veri formatını düzeltin |
+| `Stream is disposed` | Stream kapatıldı | `using` ifadesinde kullanın |
+
+## EmailSender Hataları
+
+| Hata | Sebep | Çözüm |
+|------|-------|-------|
+| `ArgumentNullException` | EmailSettings null | appsettings.json kontrolü |
+| `ArgumentException` | Email formatı geçersiz | Email adresini kontrol edin |
+| `SmtpException` | SMTP bağlantısı başarısız | Host, Port, Credentials kontrol |
+| `Timeout` | Sunucu yanıt vermedi | Timeout ayarını artırın |
+| `Authentication failed` | Credentials yanlış | UserName ve Password kontrol |
+
+## Gmail Yapılandırması Sorunları
+
+**Problem:** "Less secure apps" hatası
+
+**Çözüm:**
+1. Google Account → Security
+2. "App passwords" kısmına git
+3. Yeni bir app password oluştur
+4. 16 karakterlik parolayı `appsettings.json`'da kullan
+
+## Outlook/Office 365 Yapılandırması
+
 ```json
 {
   "EmailSettings": {
@@ -376,124 +612,215 @@ public async Task SendEmailAsyncBackground(string email, string subject, string 
     "Port": 587,
     "UserName": "your-email@outlook.com",
     "Password": "your-password",
-    "DisplayName": "Your App Name"
-  }
-}
-```
-
-### SendGrid
-```json
-{
-  "EmailSettings": {
-    "Host": "smtp.sendgrid.net",
-    "Port": 587,
-    "UserName": "apikey",
-    "Password": "SG.your-api-key",
-    "DisplayName": "Your App Name"
-  }
-}
-```
-
-### AWS SES
-```json
-{
-  "EmailSettings": {
-    "Host": "email-smtp.region.amazonaws.com",
-    "Port": 587,
-    "UserName": "your-smtp-username",
-    "Password": "your-smtp-password",
-    "DisplayName": "Your App Name"
+    "DisplayName": "Your Name"
   }
 }
 ```
 
 ---
 
-## 🔒 Güvenlik Notları
+# En İyi Uygulamalar
 
-⚠️ **Şifreleri .env veya User Secrets ile sakla:**
+## 1. CSV İçe Aktarma
 
 ```csharp
-// Program.cs - Development
-builder.Configuration.AddUserSecrets<Program>();
+// ✅ DOĞRU
+public async Task<List<T>> SafeImportAsync<T>(Stream stream) where T : class
+{
+    if (stream == null || stream.Length == 0)
+        throw new ArgumentException("Stream boş olamaz.");
 
-// Production
-builder.Configuration.AddEnvironmentVariables();
+    try
+    {
+        var records = await DataImporters.ImportCsvAsync<T>(stream);
+        return records.ToList();
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError($"CSV import hatası: {ex.Message}");
+        throw;
+    }
+}
+
+// ❌ YANLIŞ
+public async Task<IEnumerable<T>> ImportAsync<T>(Stream stream)
+{
+    return await DataImporters.ImportCsvAsync<T>(stream);
+}
 ```
 
-⚠️ **Gmail için App Password kullan (2FA):**
-- Google Account → Security → App Passwords
+## 2. Email Gönderimi
 
-⚠️ **Credentials'ı hardcode etme!**
+```csharp
+// ✅ DOĞRU
+public async Task SendEmailSafelyAsync(string email, string subject, string body)
+{
+    try
+    {
+        await _emailSender.SendEmailAsync(email, subject, body);
+    }
+    catch (ArgumentException ex)
+    {
+        _logger.LogWarning($"Geçersiz email: {email}");
+        throw;
+    }
+    catch (InvalidOperationException ex)
+    {
+        _logger.LogError($"Email gönderme başarısız: {ex.Message}");
+        // Retry logic veya fallback mekanizması ekle
+        throw;
+    }
+}
+
+// ❌ YANLIŞ
+public async Task SendEmail(string email, string subject, string body)
+{
+    await _emailSender.SendEmailAsync(email, subject, body);
+}
+```
+
+## 3. Batch Processing
+
+```csharp
+// ✅ Büyük dosyalar için batch işleme
+const int BATCH_SIZE = 1000;
+
+public async Task ImportLargeCsvAsync(Stream stream)
+{
+    var records = await DataImporters.ImportCsvAsync<T>(stream);
+    
+    var batches = records
+        .Batch(BATCH_SIZE)
+        .ToList();
+
+    foreach (var batch in batches)
+    {
+        await _context.AddRangeAsync(batch);
+        await _context.SaveChangesAsync();
+    }
+}
+```
 
 ---
 
-## 🧪 Unit Test Örneği
+## 🧪 Unit Test Örnekleri
+
+### DataImporters Test
 
 ```csharp
-[TestFixture]
+[TestClass]
+public class DataImportersTests
+{
+    [TestMethod]
+    public async Task ImportCsvAsync_WithValidData_ReturnsCorrectCount()
+    {
+        // Arrange
+        var csvContent = "FirstName,LastName,Age\nJohn,Doe,30\nJane,Smith,28";
+        var stream = new MemoryStream(Encoding.UTF8.GetBytes(csvContent));
+
+        // Act
+        var result = await DataImporters.ImportCsvAsync<Person>(stream);
+
+        // Assert
+        Assert.AreEqual(2, result.Count());
+        Assert.AreEqual("John", result.First().FirstName);
+    }
+
+    [TestMethod]
+    [ExpectedException(typeof(ArgumentException))]
+    public async Task ImportCsvAsync_WithNullStream_ThrowsException()
+    {
+        await DataImporters.ImportCsvAsync<Person>(null);
+    }
+}
+```
+
+### EmailSender Test
+
+```csharp
+[TestClass]
 public class EmailSenderTests
 {
-    private IEmailSender _emailSender;
-    private IOptions<EmailSettings> _options;
+    private EmailSender _emailSender;
+    private ILogger<EmailSender> _logger;
 
-    [SetUp]
+    [TestInitialize]
     public void Setup()
     {
         var settings = new EmailSettings
         {
             Host = "smtp.gmail.com",
             Port = 587,
-            UserName = "test@gmail.com",
+            UserName = "test@example.com",
             Password = "test-password",
             DisplayName = "Test App"
         };
-        
-        _options = Options.Create(settings);
-        _emailSender = new EmailSender(_options);
+
+        var options = Options.Create(settings);
+        _logger = new Mock<ILogger<EmailSender>>().Object;
+        _emailSender = new EmailSender(options, _logger);
     }
 
-    [Test]
-    public async Task SendEmailAsync_WithValidEmail_ShouldSendSuccessfully()
+    [TestMethod]
+    [ExpectedException(typeof(ArgumentException))]
+    public async Task SendEmailAsync_WithInvalidEmail_ThrowsException()
     {
-        // Arrange
-        string email = "recipient@example.com";
-        string subject = "Test";
-        string message = "<p>Test message</p>";
+        await _emailSender.SendEmailAsync("invalid-email", "Subject", "Body");
+    }
 
-        // Act & Assert
-        Assert.DoesNotThrowAsync(async () => 
-            await _emailSender.SendEmailAsync(email, subject, message)
-        );
+    [TestMethod]
+    [ExpectedException(typeof(ArgumentException))]
+    public async Task SendEmailAsync_WithNullSubject_ThrowsException()
+    {
+        await _emailSender.SendEmailAsync("test@example.com", null, "Body");
     }
 }
 ```
 
 ---
 
-## 📌 Gereksinimler
+## 📋 Checklist
 
-- **.NET 8.0** veya üzeri
-- **Microsoft.AspNetCore.Identity.UI** paket
-- **System.Net.Mail** namespace (built-in)
-- **SMTP sunucusu** erişimi
+### DataImporters Checklist
+- [ ] CsvHelper NuGet paketi yüklü
+- [ ] Veri modeli oluşturuldu
+- [ ] CSV dosyası doğru formatında
+- [ ] Stream doğru şekilde yönetiliyor
+- [ ] Exception handling eklendi
+- [ ] Logging yapılandırıldı
+- [ ] Unit testler yazıldı
+
+### EmailSender Checklist
+- [ ] EmailSettings modeli oluşturuldu
+- [ ] appsettings.json yapılandırıldı
+- [ ] DI container'ında kayıt yapıldı
+- [ ] SMTP credentials doğru
+- [ ] Logging yapılandırıldı
+- [ ] Exception handling eklendi
+- [ ] HTML şablonları hazırlandı
+- [ ] Unit testler yazıldı
+- [ ] Production'da credentials secure saklı
 
 ---
 
-## 🎯 Checklist
+## 🔗 İlgili Kaynaklar
 
-- [ ] EmailSettings yapılandırması
-- [ ] appsettings.json setup
-- [ ] Dependency Injection kaydı
-- [ ] Exception handling ekle
-- [ ] Logging mekanizması ekle
-- [ ] Email validasyonu yap
-- [ ] Timeout ayarı set et
-- [ ] Unit testleri yaz
-- [ ] HTML email şablonları oluştur
+- [CsvHelper Dokumentasyonu](https://joshclose.github.io/CsvHelper/)
+- [ASP.NET Core Logging](https://learn.microsoft.com/en-us/dotnet/core/extensions/logging)
+- [Dependency Injection](https://learn.microsoft.com/en-us/dotnet/core/extensions/dependency-injection)
+- [Options Pattern](https://learn.microsoft.com/en-us/dotnet/core/extensions/options)
+- [SMTP Protocol](https://tools.ietf.org/html/rfc5321)
 
 ---
 
-**Son Güncelleme:** 2026  
+## 📞 Destek ve İletişim
+
+Sorunlar veya öneriler için lütfen issues bölümüne yorum yapın.
+
+---
+
+**Sürüm:** 2.0  
+**Güncellenme Tarihi:** 2026  
 **Framework:** .NET 8.0  
-**Paket:** Microsoft.AspNetCore.Identity.UI
+**Lisans:** MIT  
+**Durum:** Production Ready ✅

@@ -1,0 +1,106 @@
+﻿@page
+@model UIWeb.Areas.Identity.Pages.RegisterModel
+@{
+    ViewData["Title"] = "Sign Up";
+}
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewData["Title"]</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="d-flex align-items-center justify-content-center" style="min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card border-0 shadow-lg" style="border-radius: 12px;">
+                    <div class="card-body p-5">
+                        <!-- Header -->
+                        <div class="text-center mb-4">
+                            <h2 class="fw-bold text-dark mb-2">Sign Up</h2>
+                            <p class="text-muted small">Hesap oluşturun ve başlayın</p>
+                        </div>
+
+                        <!-- Validation Summary -->
+                        @if (!ModelState.IsValid)
+                        {
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                <strong>Hata!</strong>
+                                <div asp-validation-summary="All" class="text-danger"></div>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        }
+
+                        <!-- Form -->
+                        <form method="post" novalidate>
+                            <!-- Email -->
+                            <div class="mb-3">
+                                <label asp-for="Input.Email" class="form-label fw-500 text-dark"></label>
+                                <input asp-for="Input.Email" class="form-control form-control-lg"
+                                       placeholder="ornek@email.com" style="border-radius: 8px; border: 1px solid #e2e8f0;">
+                                <span asp-validation-for="Input.Email" class="text-danger small mt-1 d-block"></span>
+                            </div>
+
+                            <!-- First Name -->
+                            <div class="mb-3">
+                                <label asp-for="Input.FirstName" class="form-label fw-500 text-dark"></label>
+                                <input asp-for="Input.FirstName" class="form-control form-control-lg"
+                                       placeholder="Adınız" style="border-radius: 8px; border: 1px solid #e2e8f0;">
+                                <span asp-validation-for="Input.FirstName" class="text-danger small mt-1 d-block"></span>
+                            </div>
+
+                            <!-- Last Name -->
+                            <div class="mb-3">
+                                <label asp-for="Input.LastName" class="form-label fw-500 text-dark"></label>
+                                <input asp-for="Input.LastName" class="form-control form-control-lg"
+                                       placeholder="Soyadınız" style="border-radius: 8px; border: 1px solid #e2e8f0;">
+                                <span asp-validation-for="Input.LastName" class="text-danger small mt-1 d-block"></span>
+                            </div>
+
+                            <!-- Password -->
+                            <div class="mb-3">
+                                <label asp-for="Input.Password" class="form-label fw-500 text-dark"></label>
+                                <input asp-for="Input.Password" class="form-control form-control-lg"
+                                       placeholder="••••••••" style="border-radius: 8px; border: 1px solid #e2e8f0;">
+                                <span asp-validation-for="Input.Password" class="text-danger small mt-1 d-block"></span>
+                                <small class="text-muted d-block mt-2">
+                                    Şifreniz en az 8 karakter uzunluğunda olmalıdır
+                                </small>
+                            </div>
+
+                            <!-- Confirm Password -->
+                            <div class="mb-4">
+                                <label asp-for="Input.ConfirmPassword" class="form-label fw-500 text-dark"></label>
+                                <input asp-for="Input.ConfirmPassword" class="form-control form-control-lg"
+                                       placeholder="••••••••" style="border-radius: 8px; border: 1px solid #e2e8f0;">
+                                <span asp-validation-for="Input.ConfirmPassword" class="text-danger small mt-1 d-block"></span>
+                            </div>
+
+                            <!-- Submit Button -->
+                            <button type="submit" class="btn btn-lg w-100 text-white fw-600"
+                                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; border: none; cursor: pointer;">
+                                Hesap Oluştur
+                            </button>
+                        </form>
+
+                        <!-- Divider -->
+                        <hr class="my-4">
+
+                        <!-- Sign In Link -->
+                        <p class="text-center text-muted small mb-0">
+                            Zaten hesabınız var mı?
+                            <a asp-page="./Login" class="text-decoration-none fw-600" style="color: #667eea;">Giriş Yap</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+    <partial name="_ValidationScriptsPartial" />
+</body>
+</html>
