@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace UIWeb.Areas.Identity.Pages
 {
-    public class LogOutModel(IAuthService service) : PageModel
+    public class LogoutModel(IAuthService service) : PageModel
     {
         public IActionResult OnGet()
         {

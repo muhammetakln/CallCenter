@@ -45,13 +45,14 @@ namespace Business.IServices
             try
             {
                 var signInResult = await signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, false);
+
                 if (signInResult.Succeeded)
                 {
                     return Result.Success();
                 }
                 else if (signInResult.IsLockedOut)
                 {
-                    return Result.Fail(["Your account is locked out, please contact your superior"]);
+                    return Result.Fail(["Your account is locked out, please contact your superior!"]);
                 }
                 else if (signInResult.IsNotAllowed)
                 {
@@ -59,7 +60,7 @@ namespace Business.IServices
                 }
                 else
                 {
-                    return Result.Fail(["Invalid login attempt!", "Password or email address not correct"]);
+                    return Result.Fail(["Invalid login attempt!", "Password or email address not correct!"]);
                 }
             }
             catch (Exception ex)
@@ -111,9 +112,9 @@ namespace Business.IServices
                     return Result.Fail(identityResult.Errors.Select(x => x.Description));
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                return Result.Fail(["System error!", ex.Message]);
             }
         }
 

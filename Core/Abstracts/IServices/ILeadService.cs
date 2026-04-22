@@ -1,4 +1,5 @@
 ﻿using Core.Concretes.DTOs;
+using Core.Concretes.Enums;
 using System.Security.Claims;
 using Utilities.Responses;
 
@@ -11,5 +12,7 @@ namespace Core.Abstracts.IServices
         Task<IResult> ImportFromFileAsync(Microsoft.AspNetCore.Http.IFormFile file);
         Task<IResult> PickLeadAsync(string leadId, ClaimsPrincipal user);
         //hareket ekle, müşteri detayı ekle buraya ,
+        Task<IResult> AddActivityAsync(ActivityType type, string leadId, ClaimsPrincipal user);
+
     }
 }

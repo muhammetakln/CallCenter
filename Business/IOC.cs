@@ -25,12 +25,13 @@ namespace Business
                 .AddDefaultTokenProviders();
             services.AddAutoMapper(config =>
             {
-
+                config.AddProfile<Profiles>();
             });
 
             services.AddScoped<IAuthService, AuthService>();
             //Scoped başta oluşur arada değişebilir oldupu için scoped kullanıyoruz prototip yapı.Sadece veri tabaı işlemlerinde kullanılır.Son ana kadaara değişime açık.
             services.AddScoped<IUnitOfWork, UnitOfWork>();
+            services.AddScoped<ILeadService,LeadService>();
 
             services.Configure<EmailSettings>(
              configuration.GetSection("EmailSettings"));

@@ -6,14 +6,14 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 namespace UIWeb.Areas.Identity.Pages
 {
     
-    public class RegisterMode(IAuthService service) : PageModel
+    public class RegisterModel(IAuthService service) : PageModel
     {
         [BindProperty]
         public RegisterDto Input { get; set; }
         public void OnGet()
         {
         }
-        public async Task<ActionResult> OnGetAsync()
+        public async Task<ActionResult> OnPostAsync()
         {
             if(ModelState.IsValid)
             {

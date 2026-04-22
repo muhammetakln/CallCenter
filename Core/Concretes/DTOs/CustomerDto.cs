@@ -1,18 +1,16 @@
-﻿using Core.Concretes.Entities;
-using Core.Concretes.Enums;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Reflection.PortableExecutable;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Core.Concretes.Enums;
 
 namespace Core.Concretes.DTOs
 {
     public class CustomerDto
     {
+        public int Id    { get; set; }
+        public string Name { get; set; } = null!;
+        public string PhoneNumber { get; set; } = null!;
+        public string Email { get; set; } = null!;
+        public string Address { get; set; } = null!;
+        public string City { get; set; } = null!;
+        public string Region { get; set; } = null!;
 
     }
     public class LeadCreateDto
@@ -40,6 +38,6 @@ namespace Core.Concretes.DTOs
         public string? AssignedUserName { get; set; }
         public LeadSource Source { get; set; }
         public LeadStatus Status { get; set; }
-              
+
     }
 }
